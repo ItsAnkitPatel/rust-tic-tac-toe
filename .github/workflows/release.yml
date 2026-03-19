@@ -1,0 +1,41 @@
+name: Build & Release
+
+on:
+    push:
+        tags:
+            - "v*.*.*"
+
+jobs:
+    build:
+        name: Build binaries
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                target:
+                    - x86_64-unknown-linux-gnu
+                    - x86_64-pc-windows-gnu
+                    - x86_64-apple-darwin
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Rust
+              run: rustup target add ${{ matrix.target }}
+
+            - name: Build
+              run: cargo build --release --target ${{ matrix.target }}
+
+            - name: Prepare binary
+              run: |
+                  mkdir dist
+                  if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+                    cp target/${{ matrix.target }}/release/rust-tic-tac-toe.exe dist/
+                  else
+                    cp target/${{ matrix.target }}/release/rust-tic-tac-toe dist/
+                  fi
+
+            - name: Upload Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: dist/*
