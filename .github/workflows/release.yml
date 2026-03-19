@@ -6,52 +6,70 @@ on:
             - "v*.*.*"
 
 permissions:
-    contents: write # 🔥 required for creating releases
+    contents: write # required to create releases
 
 env:
     CARGO_TERM_COLOR: always
 
 jobs:
     build:
-        name: Build binaries
+        name: Build & Package
         strategy:
             matrix:
                 include:
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
-                      binary_name: tic-tac-toe-linux
-
-                    - os: windows-latest
-                      target: x86_64-pc-windows-gnu
-                      binary_name: tic-tac-toe-windows.exe
+                      bin: tic-tac-toe
+                      archive: tic-tac-toe-linux.tar.gz
 
                     - os: macos-latest
                       target: x86_64-apple-darwin
-                      binary_name: tic-tac-toe-macos
+                      bin: tic-tac-toe
+                      archive: tic-tac-toe-macos.tar.gz
+
+                    - os: windows-latest
+                      target: x86_64-pc-windows-gnu
+                      bin: tic-tac-toe.exe
+                      archive: tic-tac-toe-windows.zip
 
         runs-on: ${{ matrix.os }}
 
         steps:
-            - name: Checkout code
+            - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Setup Rust
+            - name: Setup Rust target
               run: rustup target add ${{ matrix.target }}
 
             - name: Build
               run: cargo build --release --target ${{ matrix.target }}
 
+            # 🔥 Create dist folder and copy ONLY the binary
             - name: Prepare binary
               shell: bash
               run: |
-                  mkdir dist
+                  mkdir -p dist
+                  cp target/${{ matrix.target }}/release/${{ matrix.bin }} dist/
 
-                  if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-                    cp target/${{ matrix.target }}/release/tic-tac-toe.exe dist/${{ matrix.binary_name }}
-                  else
-                    cp target/${{ matrix.target }}/release/tic-tac-toe dist/${{ matrix.binary_name }}
-                  fi
+            # 🐧🍎 Package for Linux/macOS (preserves executable permission)
+            - name: Package (tar.gz)
+              if: matrix.os != 'windows-latest'
+              shell: bash
+              run: |
+                  cd dist
+                  tar -czvf ${{ matrix.archive }} ${{ matrix.bin }}
+                  rm ${{ matrix.bin }}
 
+            # 🪟 Package for Windows
+            - name: Package (zip)
+              if: matrix.os == 'windows-latest'
+              shell: bash
+              run: |
+                  cd dist
+                  zip ${{ matrix.archive }} ${{ matrix.bin }}
+                  rm ${{ matrix.bin }}
+
+            # 🚀 Upload release assets
             - name: Upload to GitHub Release
               uses: softprops/action-gh-release@v2
               with:
