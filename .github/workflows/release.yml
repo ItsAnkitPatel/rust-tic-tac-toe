@@ -42,6 +42,7 @@ jobs:
               run: cargo build --release --target ${{ matrix.target }}
 
             - name: Prepare binary
+              shell: bash
               run: |
                   mkdir dist
 
