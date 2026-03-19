@@ -4,26 +4,36 @@ on:
     push:
         tags:
             - "v*.*.*"
+
 permissions:
-    contents: write
+    contents: write # 🔥 required for creating releases
+
+env:
+    CARGO_TERM_COLOR: always
+
 jobs:
     build:
+        name: Build binaries
         strategy:
             matrix:
                 include:
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
+                      binary_name: tic-tac-toe-linux
 
                     - os: windows-latest
                       target: x86_64-pc-windows-gnu
+                      binary_name: tic-tac-toe-windows.exe
 
                     - os: macos-latest
                       target: x86_64-apple-darwin
+                      binary_name: tic-tac-toe-macos
 
         runs-on: ${{ matrix.os }}
 
         steps:
-            - uses: actions/checkout@v4
+            - name: Checkout code
+              uses: actions/checkout@v4
 
             - name: Setup Rust
               run: rustup target add ${{ matrix.target }}
@@ -31,7 +41,18 @@ jobs:
             - name: Build
               run: cargo build --release --target ${{ matrix.target }}
 
-            - name: Upload Release
+            - name: Prepare binary
+              run: |
+                  mkdir dist
+
+                  if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+                    cp target/${{ matrix.target }}/release/tic-tac-toe.exe dist/${{ matrix.binary_name }}
+                  else
+                    cp target/${{ matrix.target }}/release/tic-tac-toe dist/${{ matrix.binary_name }}
+                  fi
+
+            - name: Upload to GitHub Release
               uses: softprops/action-gh-release@v2
               with:
-                  files: target/${{ matrix.target }}/release/*
+                  files: dist/*
+                  overwrite_files: true
