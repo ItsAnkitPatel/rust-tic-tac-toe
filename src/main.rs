@@ -5,70 +5,41 @@ struct Winner {
     continue_loop: bool,
 }
 
-fn find_winner(vec: &Vec<&str>) -> Winner {
-    let mut x_choices: Vec<usize> = vec![];
-    let mut o_choices: Vec<usize> = vec![];
+const WIN_PATTERNS: [[usize; 3]; 8] = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+];
 
-    for (index, value) in vec.iter().enumerate() {
-        if *value == "X" {
-            x_choices.push(index);
-        }
-        if *value == "O" {
-            o_choices.push(index);
+fn find_winner(board: &[&str]) -> Winner {
+    for (player, color) in [("X", "green"), ("O", "cyan")] {
+        for pattern in WIN_PATTERNS {
+            if board[pattern[0]] == player
+                && board[pattern[1]] == player
+                && board[pattern[2]] == player
+            {
+                print_gridbox(board);
+                println!("{} {}", player.color(color), "won the game!".bright_green());
+
+                return Winner {
+                    continue_loop: false,
+                };
+            }
         }
     }
-    if x_choices.len() <= 2 && o_choices.len() <= 2 {
+
+    if board.iter().any(|v| v.is_empty()) {
         return Winner {
             continue_loop: true,
         };
     }
-    let mut x_i = 0;
-    while x_i < x_choices.len() - 2 {
-        let slice = &mut x_choices[x_i..x_i + 3];
 
-        let mut j = 1;
-        let first_diff = slice[j] - slice[j - 1];
-        j += 1;
-        let second_diff = slice[j] - slice[j - 1];
-
-        if first_diff == second_diff {
-            print_gridbox(vec);
-            println!("{} {}", "X".green(), "won the game!".bright_green());
-            return Winner {
-                continue_loop: false,
-            };
-        }
-        x_i += 1;
-    }
-
-    let mut o_i = 0;
-    while o_i < o_choices.len() - 2 {
-        let slice = &mut o_choices[o_i..o_i + 3];
-        let mut j = 1;
-        let first_diff = slice[j] - slice[j - 1];
-        j += 1;
-        let second_diff = slice[j] - slice[j - 1];
-
-        if first_diff == second_diff {
-            print_gridbox(vec);
-            println!("{} {}", "O".cyan(), "won the game!".bright_green());
-            return Winner {
-                continue_loop: false,
-            };
-        }
-
-        o_i += 1;
-    }
-
-    for val in vec {
-        if val.is_empty() {
-            return Winner {
-                continue_loop: true,
-            };
-        }
-    }
-
-    print_gridbox(vec);
+    print_gridbox(board);
 
     println!("{}", "DRAW. Nobody Won!".bright_blue());
     Winner {
